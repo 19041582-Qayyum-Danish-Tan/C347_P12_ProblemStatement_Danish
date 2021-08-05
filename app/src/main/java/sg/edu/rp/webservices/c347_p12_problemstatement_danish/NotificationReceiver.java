@@ -9,41 +9,91 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.RemoteInput;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.RemoteInput;
 
 public class NotificationReceiver extends BroadcastReceiver {
     int reqCode = 12345;
+    int notificationId = 001; // A unique ID for our notification
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
+        NotificationManager nm = (NotificationManager)
+                getSystemService(Context.NOTIFICATION_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new
                     NotificationChannel("default", "Default Channel",
-                    NotificationManager.IMPORTANCE_HIGH);
+                    NotificationManager.IMPORTANCE_DEFAULT);
 
             channel.setDescription("This is for default notification");
-            notificationManager.createNotificationChannel(channel);
+            nm.createNotificationChannel(channel);
         }
 
-        Intent i = new Intent(context, MainActivity.class);
-        PendingIntent pIntent = PendingIntent.getActivity (context, reqCode, i, PendingIntent.FLAG_CANCEL_CURRENT);
+        Intent intent = new Intent(MainActivity.this, MainActivity.class);
+        PendingIntent pendingIntent =
+                PendingIntent.getActivity(MainActivity.this, 0,
+                        intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "default");
-        NotificationCompat.BigTextStyle bigText = new NotificationCompat.BigTextStyle();
-        bigText.setBigContentTitle("Feeling Good Lyrics");
-        bigText.bigText("Birds flying high, you know how I feel" + "\nSun in the sky, you know how I feel" + "\nReeds driftin' on by, you know how I feel" + "\nIt's a new dawn, it's a new day, it's a new life for me" + "\nYeah~~ \nIt's a new dawn, it's a new day, it's a new life for me" + "\nOooooh... \nAnd I'm feeling good");
-        builder.setContentTitle("Feeling Good Lyrics");
-        builder.setContentText("Birds flying high, you know how I feel");
-        builder.setSmallIcon(android.R.drawable.ic_dialog_info);
-        builder.setContentIntent(pIntent);
-        builder.setStyle(bigText);
-        builder.setAutoCancel(true);
-        builder.setLights(Color.GREEN, 400,500);
-        builder.setVibrate(new long[] {0, 1000, 200, 1000});
-        Notification n = builder.build();
-        notificationManager.notify(123, n);
+        NotificationCompat.Action action = new
+                NotificationCompat.Action.Builder(
+                R.mipmap.ic_launcher,
+                "This is an Action",
+                pendingIntent).build();
+
+        Intent intentreply = new Intent(MainActivity.this,
+                ReplyActivity.class);
+        PendingIntent pendingIntentReply = PendingIntent.getActivity
+                (MainActivity.this, 0, intentreply,
+                        PendingIntent.FLAG_UPDATE_CURRENT);
+
+        RemoteInput ri = new RemoteInput.Builder("status")
+                .setLabel("Status report")
+                .setChoices(new String [] {"Done", "Not yet"})
+                .build();
+
+        NotificationCompat.Action action2 = new
+                NotificationCompat.Action.Builder(
+                R.mipmap.ic_launcher,
+                "Reply",
+                pendingIntentReply)
+                .addRemoteInput(ri)
+                .build();
+
+        NotificationCompat.WearableExtender extender = new
+                NotificationCompat.WearableExtender();
+        extender.addAction(action);
+        extender.addAction(action2);
+
+        String text = getString(R.string.basic_notify_msg);
+        String title = getString(R.string.notification_title);
+
+        NotificationCompat.Builder builder = new
+                NotificationCompat.Builder(MainActivity.this, "default");
+        builder.setContentText(text);
+        builder.setContentTitle(title);
+        builder.setSmallIcon(android.R.drawable.btn_star_big_off);
+
+        // Attach the action for Wear notification created above
+        builder.extend(extender);
+
+        Notification notification = builder.build();
+
+        nm.notify(notificationId, notification);
     }
 }
